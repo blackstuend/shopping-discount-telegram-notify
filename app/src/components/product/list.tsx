@@ -1,6 +1,10 @@
-import type { Product } from '@/apis/product'
-import { deleteProduct, getProducts } from '@/apis/product'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -10,55 +14,39 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { TestTube2, Trash2 } from 'lucide-react'
+import { useProductStore } from '@/store/productStore'
+import { Loader2, PencilIcon, RadioTower, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
+import ProductForm from './ProductForm'
 
 interface ProductListProps {
   refreshTrigger?: number
 }
 
 export default function ProductList({ refreshTrigger = 0 }: ProductListProps) {
-  const [products, setProducts] = useState<Product[]>([])
-
-  const fetchProducts = async () => {
-    try {
-      const { data } = await getProducts()
-
-      setProducts(data.data)
-    }
-    catch (error: any) {
-      console.error('Fetch products failed', error)
-      toast.error('Fetch products failed')
-    }
-  }
-
-  const handleDeleteProduct = async (productId: string) => {
-    try {
-      await deleteProduct(productId)
-      toast.success('Delete product successfully')
-      fetchProducts()
-    }
-    catch (error: any) {
-      console.error('Delete product failed', error)
-      toast.error('Delete product failed')
-    }
-
-    fetchProducts()
-  }
-
-  const handleTestButtonClick = (productName: string) => {
-    toast.info(
-      `Test notification for "${productName}". This button helps you verify that discount notifications for this product will be properly sent to your Telegram.`,
-      {
-        duration: 6000,
-      },
-    )
-  }
+  const {
+    products,
+    editingProduct,
+    fetchProducts,
+    removeProduct,
+    setEditingProduct,
+    testProductNotification,
+  } = useProductStore()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchProducts()
-  }, [refreshTrigger])
+  }, [fetchProducts, refreshTrigger])
+
+  const handleRemoveProduct = async (productId: string) => {
+    setDeletingId(productId)
+    try {
+      await removeProduct(productId)
+    }
+    finally {
+      setDeletingId(null)
+    }
+  }
 
   return (
     <>
@@ -76,7 +64,7 @@ export default function ProductList({ refreshTrigger = 0 }: ProductListProps) {
         </TableHeader>
         <TableBody>
           {products.map(product => (
-            <TableRow key={product.id}>
+            <TableRow key={product.id} className={deletingId === product.id ? 'opacity-50 pointer-events-none' : ''}>
               <TableCell>{product.name}</TableCell>
               <TableCell>{product.price}</TableCell>
               <TableCell>{product.platforms?.join(', ') || 'N/A'}</TableCell>
@@ -86,29 +74,65 @@ export default function ProductList({ refreshTrigger = 0 }: ProductListProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleTestButtonClick(product.name)}
+                      onClick={() => testProductNotification(product.name)}
                       title="Test notification"
                     >
-                      <TestTube2 className="h-4 w-4" />
+                      <RadioTower className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Test button: Sends AI search price to chatroom. May take around a minute to execute.</p>
+                    <p className="text-xs break-all whitespace-normal">
+                      Test notification: Sends price alert to Telegram chat.
+                      <br />
+                      Process may take up to a minute to complete.
+                    </p>
                   </TooltipContent>
                 </Tooltip>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDeleteProduct(product.id)}
-                  title="Delete product"
+                  onClick={() => setEditingProduct(product)}
+                  title="Edit product"
+                  disabled={deletingId === product.id}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <PencilIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveProduct(product.id)}
+                  title="Delete product"
+                  disabled={deletingId === product.id}
+                >
+                  {deletingId === product.id
+                    ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )
+                    : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                 </Button>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      <Dialog open={!!editingProduct} onOpenChange={open => !open && setEditingProduct(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+          </DialogHeader>
+          {editingProduct && (
+            <ProductForm
+              mode="edit"
+              product={editingProduct}
+              onSuccess={() => setEditingProduct(null)}
+              onCancel={() => setEditingProduct(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

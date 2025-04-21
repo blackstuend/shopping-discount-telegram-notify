@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
       status: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS, PUT",
         "Access-Control-Allow-Headers":
           "Content-Type, X-Telegram-InitData, Authorization",
       },
@@ -68,6 +68,8 @@ Deno.serve(async (req) => {
       return handleCreate(req, context);
     case "DELETE":
       return handleDelete(req, context);
+    case "PUT":
+      return handleUpdate(req, context);
     default:
       return createErrorResponse({
         message: "Method not allowed",
@@ -168,6 +170,24 @@ async function handleDelete(req: Request, context: Context) {
     console.error("Error deleting product:", error);
     return createErrorResponse({
       message: "Failed to delete product",
+      code: 500,
+    });
+  }
+
+  return createSuccessResponse();
+}
+
+async function handleUpdate(req: Request, context: Context) {
+  const id = req.url.split("/").pop();
+  const product = await req.json();
+
+  const { error } = await supabase.from("products").update(product).eq("id", id)
+    .eq("chatId", context.chatId);
+
+  if (error) {
+    console.error("Error updating product:", error);
+    return createErrorResponse({
+      message: "Failed to update product",
       code: 500,
     });
   }

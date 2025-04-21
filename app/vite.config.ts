@@ -6,6 +6,7 @@ import mkcert from 'vite-plugin-mkcert'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/shopping-discount-telegram-notify/',
   server: {
     host: '0.0.0.0',
     proxy: {

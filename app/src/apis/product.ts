@@ -2,8 +2,7 @@ import { getTelegramInitData } from '@/global/telegram'
 import axios from 'axios'
 
 const service = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL}/products`,
-
+  baseURL: `${import.meta.env.VITE_SUPABASE_API_URL}/products`,
 })
 
 service.interceptors.request.use((config) => {
@@ -14,7 +13,7 @@ service.interceptors.request.use((config) => {
   }
 
   config.headers['X-Telegram-InitData'] = initData
-  config.headers.Authorization = `Bearer ${import.meta.env.VITE_API_TOKEN}`
+  config.headers.Authorization = `Bearer ${import.meta.env.VITE_SUPABASE_ANON_TOKEN}`
 
   return config
 })
@@ -38,4 +37,8 @@ export async function createProduct(product: Omit<Product, 'id'>) {
 
 export async function deleteProduct(id: string) {
   return service.delete(`/${id}`)
+}
+
+export async function updateProduct(id: string, product: Omit<Product, 'id'>) {
+  return service.put(`/${id}`, product)
 }
