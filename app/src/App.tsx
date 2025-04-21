@@ -11,7 +11,11 @@ function App() {
   const initData = getTelegramInitData()
 
   if (!initData) {
-    return <div>Loading...</div>
+    return (
+      <div>
+        This is not running in Telegram Mini App
+      </div>
+    )
   }
   else {
     return (
